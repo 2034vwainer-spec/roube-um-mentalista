@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Roube um Ovo</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#101827;color:white;font-family:Arial;text-align:center}
+h1{color:#ffe66d;margin:14px 0 6px}
+#info{padding:10px;font-size:17px}
+canvas{display:block;margin:auto;background:#70bd59;border:4px solid #d8e8b0;border-radius:12px;width:min(94vw,800px);height:auto;touch-action:none}
+button{padding:12px 18px;margin:5px;border:0;border-radius:10px;background:#ffcf4a;font-weight:bold;font-size:16px;cursor:pointer}
+p{margin:8px}
+</style>
+</head>
+<body>
+<h1>🥚 ROUBE UM OVO 🥚</h1>
+<div id="info">
+🪙 Moedas: <span id="coins">0</span> |
+🥚 Ovos: <span id="eggs">0</span> |
+🏆 Recorde: <span id="record">0</span>
+</div>
+<canvas id="game" width="800" height="500"></canvas>
+<p>Use WASD ou as setas para andar. Chegue perto de um ovo e aperte E!</p>
+<button onclick="buySpeed()">⚡ Comprar velocidade (10 moedas)</button>
+<button onclick="restart()">🔄 Reiniciar</button>
+<div>
+<button onpointerdown="keys.ArrowUp=true" onpointerup="keys.ArrowUp=false" onpointerleave="keys.ArrowUp=false">⬆️</button><br>
+<button onpointerdown="keys.ArrowLeft=true" onpointerup="keys.ArrowLeft=false" onpointerleave="keys.ArrowLeft=false">⬅️</button>
+<button onpointerdown="keys.ArrowDown=true" onpointerup="keys.ArrowDown=false" onpointerleave="keys.ArrowDown=false">⬇️</button>
+<button onpointerdown="keys.ArrowRight=true" onpointerup="keys.ArrowRight=false" onpointerleave="keys.ArrowRight=false">➡️</button>
+<button onclick="steal()">🥚 PEGAR OVO</button>
+</div>
+<script>
+const c=document.getElementById("game");
+const ctx=c.getContext("2d");
+const keys={};
+let player, eggs, coins, speed, message, lastTime, running;
+
+function restart(){
+ player={x:400,y:250,size:18};
+ eggs=0;coins=0;speed=2.7;message="Pegue os ovos das bases!";
+ lastTime=0;running=true;
+ document.getElementById("coins").textContent=coins;
+ document.getElementById("eggs").textContent=eggs;
+ eggsOnMap();
+}
+let eggsMap=[];
+function eggsOnMap(){
+ eggsMap=[
+ {x:110,y:100,taken:false},
+ {x:690,y:100,taken:false},
+ {x:110,y:400,taken:false},
+ {x:690,y:400,taken:false},
+ {x:400,y:100,taken:false},
+ {x:400,y:400,taken:false}
+ ];
+}
+function drawBase(x,y,color,name){
+ ctx.fillStyle=color;ctx.fillRect(x-55,y-40,110,80);
+ ctx.strokeStyle="white";ctx.lineWidth=3;ctx.strokeRect(x-55,y-40,110,80);
+ ctx.fillStyle="white";ctx.font="bold 14px Arial";ctx.textAlign="center";
+ ctx.fillText(name,x,y-48);
+}
+function drawEgg(x,y){
+ ctx.fillStyle="#fff4b0";ctx.beginPath();
+ ctx.ellipse(x,y,11,15,0,0,Math.PI*2);ctx.fill();
+ ctx.strokeStyle="#d8a72b";ctx.stroke();
+ ctx.fillStyle="#e6b837";ctx.fillRect(x-4,y-3,8,3);
+}
+function draw(){
+ ctx.clearRect(0,0,800,500);
+ ctx.fillStyle="#79c85c";ctx.fillRect(0,0,800,500);
+ // Caminhos
+ ctx.fillStyle="#d8c18b";
+ ctx.fillRect(365,0,70,500);ctx.fillRect(0,215,800,70);
+ // Bases
+ drawBase(110,100,"#3c77d4","SUA BASE");
+ drawBase(690,100,"#d94d4d","BASE VERMELHA");
+ drawBase(110,400,"#9c57d6","BASE ROXA");
+ drawBase(690,400,"#e7a52d","BASE DOURADA");
+ // Árvores
+ for(let i=0;i<14;i++){
+ let x=(i*137+40)%790,y=(i*83+20)%480;
+ if(Math.abs(x-400)<90 || Math.abs(y-250)<65)continue;
+ ctx.fillStyle="#237b39";ctx.beginPath();ctx.arc(x,y,12,0,Math.PI*2);ctx.fill();
+ }
+ // Ovos
+ eggsMap.forEach(e=>{if(!e.taken)drawEgg(e.x,e.y)});
+ // Jogador
+ ctx.fillStyle="#2467ff";ctx.beginPath();
+ ctx.arc(player.x,player.y,player.size,0,Math.PI*2);ctx.fill();
+ ctx.strokeStyle="white";ctx.lineWidth=3;ctx.stroke();
+ ctx.fillStyle="white";ctx.beginPath();ctx.arc(player.x-5,player.y-3,3,0,7);ctx.arc(player.x+5,player.y-3,3,0,7);ctx.fill();
+ ctx.fillStyle="#182235";ctx.font="bold 14px Arial";ctx.textAlign="center";
+ ctx.fillText("VOCÊ",player.x,player.y-25);
+ // Mensagem
+ ctx.fillStyle="#172033";ctx.fillRect(220,8,360,32);
+ ctx.fillStyle="white";ctx.font="16px Arial";
+ ctx.fillText(message,400,29);
+}
+function steal(){
+ let target=null,dist=Infinity;
+ eggsMap.forEach(e=>{
+ let d=Math.hypot(player.x-e.x,player.y-e.y);
+ if(!e.taken&&d<35&&d<dist){target=e;dist=d;}
+ });
+ if(target){
+ target.taken=true;eggs++;coins+=5;
+ message="Você roubou um ovo! +5 moedas";
+ document.getElementById("eggs").textContent=eggs;
+ document.getElementById("coins").textContent=coins;
+ document.getElementById("record").textContent=Math.max(eggs,Number(document.getElementById("record").textContent));
+ if(eggsMap.every(e=>e.taken)){
+ eggsOnMap();message="Os ovos reapareceram!";
+ }
+ }else message="Chegue mais perto de um ovo!";
+}
+function buySpeed(){
+ if(coins>=10){
+ coins-=10;speed+=0.8;
+ document.getElementById("coins").textContent=coins;
+ message="Velocidade aumentada!";
+ }else message="Você precisa de 10 moedas!";
+}
+function move(){
+ if(keys.ArrowUp||keys.w||keys.W)player.y-=speed;
+ if(keys.ArrowDown||keys.s||keys.S)player.y+=speed;
+ if(keys.ArrowLeft||keys.a||keys.A)player.x-=speed;
+ if(keys.ArrowRight||keys.d||keys.D)player.x+=speed;
+ player.x=Math.max(20,Math.min(780,player.x));
+ player.y=Math.max(20,Math.min(480,player.y));
+}
+function loop(time){
+ if(!running)return;
+ move();draw();
+ requestAnimationFrame(loop);
+}
+document.addEventListener("keydown",e=>{
+ if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," "].includes(e.key))e.preventDefault();
+ keys[e.key]=true;
+ if(e.key.toLowerCase()==="e")steal();
+});
+document.addEventListener("keyup",e=>keys[e.key]=false);
+window.addEventListener("blur",()=>Object.keys(keys).forEach(k=>keys[k]=false));
+c.addEventListener("pointerdown",e=>{
+ c.focus();
+});
+restart();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
